@@ -5,8 +5,9 @@ const app = express();
 app.use(express.json());
 
 let fruitServers = [];
+// Keep track of jobIds we have already notified Discord about
+let notifiedServers = new Set();
 
-// PASTE YOUR DISCORD WEBHOOK URL INSIDE THE QUOTES BELOW
 const DISCORD_WEBHOOK_URL = "https://discord.com/api/webhooks/1531298819013345440/ajfMvJxA3fipdBSfK4oRfWqq2n2ySrYcnQRNtrQb3r7x3z7ic77RD0T0ctTbR2SU6xVP";
 
 function sendToDiscord(fruitName, jobId) {
@@ -39,7 +40,7 @@ function sendToDiscord(fruitName, jobId) {
             if (res.statusCode !== 204 && res.statusCode !== 200) {
                 console.log(`❌ Discord Error Status ${res.statusCode}: ${responseBody}`);
             } else {
-                console.log("✅ Successfully sent message to Discord!");
+                console.log("✅ Successfully sent single message to Discord for this server!");
             }
         });
     });
@@ -69,10 +70,16 @@ app.post('/update-fruit', (req, res) => {
             fruitServers.pop();
         }
 
-        console.log(`Received report for: ${data.fruitName}`);
-        sendToDiscord(data.fruitName, data.jobId);
+        // Only send to Discord if we haven't already reported this specific server Job ID
+        if (!notifiedServers.has(data.jobId)) {
+            notifiedServers.add(data.jobId);
+            console.log(`New unique server found! Sending report for: ${data.fruitName}`);
+            sendToDiscord(data.fruitName, data.jobId);
+        } else {
+            console.log(`Skipped Discord notification (Already reported server: ${data.jobId})`);
+        }
         
-        return res.status(200).json({ status: "Success", message: "Server saved and notified Discord." });
+        return res.status(200).json({ status: "Success", message: "Server saved." });
     }
     res.status(400).json({ status: "Error", message: "Invalid data format." });
 });
