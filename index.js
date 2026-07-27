@@ -3,12 +3,12 @@ const app = express();
 
 app.use(express.json());
 
-// Store a list of reported fruit servers
 let fruitServers = [];
 
-// POST: Receives data when a fruit is found
 app.post('/update-fruit', (req, res) => {
     const data = req.body;
+    console.log("Received POST data:", data); // Check Render logs to see what's coming in
+    
     if (data && data.jobId && data.fruitName) {
         fruitServers = fruitServers.filter(s => s.jobId !== data.jobId);
         
@@ -23,13 +23,11 @@ app.post('/update-fruit', (req, res) => {
             fruitServers.pop();
         }
         
-        console.log(`Fruit logged: ${data.fruitName} in server ${data.jobId}`);
         return res.status(200).json({ status: "Success", message: "Server saved." });
     }
     res.status(400).json({ status: "Error", message: "Invalid data format." });
 });
 
-// GET: This creates the /get-fruit-servers endpoint on your URL
 app.get('/get-fruit-servers', (req, res) => {
     res.status(200).json(fruitServers);
 });
