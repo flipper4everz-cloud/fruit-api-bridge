@@ -7,10 +7,13 @@ app.use(express.json());
 let fruitServers = [];
 
 // PASTE YOUR DISCORD WEBHOOK URL INSIDE THE QUOTES BELOW
-const DISCORD_WEBHOOK_URL = "https://discord.com/api/webhooks/1531298819013345440/ajfMvJxA3fipdBSfK4oRfWqq2n2ySrYcnQRNtrQb3r7x3z7ic77RD0T0ctTbR2SU6xVP";
+const DISCORD_WEBHOOK_URL = "YOUR_DISCORD_WEBHOOK_URL_HERE";
 
 function sendToDiscord(fruitName, jobId) {
-    if (!DISCORD_WEBHOOK_URL || !DISCORD_WEBHOOK_URL.includes("discord.com")) return;
+    if (!DISCORD_WEBHOOK_URL || !DISCORD_WEBHOOK_URL.includes("discord.com")) {
+        console.log("❌ DISCORD ERROR: Webhook URL is invalid or missing!");
+        return;
+    }
 
     const data = JSON.stringify({
         content: `🎯 **New Fruit Found!**\n**Fruit:** ${fruitName}\n**Job ID:** \`${jobId}\``
@@ -27,12 +30,25 @@ function sendToDiscord(fruitName, jobId) {
         }
     };
 
+    console.log("Attempting to send notification to Discord...");
+
     const req = https.request(options, (res) => {
-        res.on('data', () => {});
+        let responseBody = '';
+        res.on('data', (chunk) => {
+            responseBody += chunk;
+        });
+        res.on('end', () => {
+            console.log(`Discord Response Status: ${res.statusCode}`);
+            if (res.statusCode !== 204 && res.statusCode !== 200) {
+                console.log(`❌ Discord Error Body: ${responseBody}`);
+            } else {
+                console.log("✅ Successfully sent message to Discord!");
+            }
+        });
     });
 
     req.on('error', (error) => {
-        console.error("Discord Webhook Error:", error);
+        console.error("❌ HTTPS Request to Discord Failed:", error);
     });
 
     req.write(data);
@@ -56,11 +72,12 @@ app.post('/update-fruit', (req, res) => {
             fruitServers.pop();
         }
 
-        // Trigger Discord notification safely
+        console.log(`Received report for: ${data.fruitName} | JobID: ${data.jobId}`);
         sendToDiscord(data.fruitName, data.jobId);
         
         return res.status(200).json({ status: "Success", message: "Server saved and notified Discord." });
     }
+    console.log("❌ Invalid data format received.");
     res.status(400).json({ status: "Error", message: "Invalid data format." });
 });
 
