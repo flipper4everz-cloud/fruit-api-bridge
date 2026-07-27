@@ -6,7 +6,7 @@ app.use(express.json());
 
 let fruitServers = [];
 
--- PASTE YOUR DISCORD WEBHOOK URL INSIDE THE QUOTES BELOW
+// PASTE YOUR DISCORD WEBHOOK URL INSIDE THE QUOTES BELOW
 const DISCORD_WEBHOOK_URL = "https://discord.com/api/webhooks/1531298819013345440/ajfMvJxA3fipdBSfK4oRfWqq2n2ySrYcnQRNtrQb3r7x3z7ic77RD0T0ctTbR2SU6xVP";
 
 function sendToDiscord(fruitName, jobId) {
@@ -15,7 +15,6 @@ function sendToDiscord(fruitName, jobId) {
         return;
     }
 
-    // Safely encode the payload using JSON.stringify to prevent invalid JSON errors
     const payload = JSON.stringify({
         content: `🎯 **New Fruit Found!**\n**Fruit:** ${String(fruitName)}\n**Job ID:** \`${String(jobId)}\``
     });
