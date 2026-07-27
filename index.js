@@ -6,7 +6,7 @@ app.use(express.json());
 
 let fruitServers = [];
 
-// PASTE YOUR DISCORD WEBHOOK URL INSIDE THE QUOTES BELOW
+-- PASTE YOUR DISCORD WEBHOOK URL INSIDE THE QUOTES BELOW
 const DISCORD_WEBHOOK_URL = "https://discord.com/api/webhooks/1531298819013345440/ajfMvJxA3fipdBSfK4oRfWqq2n2ySrYcnQRNtrQb3r7x3z7ic77RD0T0ctTbR2SU6xVP";
 
 function sendToDiscord(fruitName, jobId) {
@@ -15,8 +15,9 @@ function sendToDiscord(fruitName, jobId) {
         return;
     }
 
-    const data = JSON.stringify({
-        content: `🎯 **New Fruit Found!**\n**Fruit:** ${fruitName}\n**Job ID:** \`${jobId}\``
+    // Safely encode the payload using JSON.stringify to prevent invalid JSON errors
+    const payload = JSON.stringify({
+        content: `🎯 **New Fruit Found!**\n**Fruit:** ${String(fruitName)}\n**Job ID:** \`${String(jobId)}\``
     });
 
     const url = new URL(DISCORD_WEBHOOK_URL);
@@ -26,11 +27,9 @@ function sendToDiscord(fruitName, jobId) {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
-            'Content-Length': data.length
+            'Content-Length': Buffer.byteLength(payload)
         }
     };
-
-    console.log("Attempting to send notification to Discord...");
 
     const req = https.request(options, (res) => {
         let responseBody = '';
@@ -38,9 +37,8 @@ function sendToDiscord(fruitName, jobId) {
             responseBody += chunk;
         });
         res.on('end', () => {
-            console.log(`Discord Response Status: ${res.statusCode}`);
             if (res.statusCode !== 204 && res.statusCode !== 200) {
-                console.log(`❌ Discord Error Body: ${responseBody}`);
+                console.log(`❌ Discord Error Status ${res.statusCode}: ${responseBody}`);
             } else {
                 console.log("✅ Successfully sent message to Discord!");
             }
@@ -51,7 +49,7 @@ function sendToDiscord(fruitName, jobId) {
         console.error("❌ HTTPS Request to Discord Failed:", error);
     });
 
-    req.write(data);
+    req.write(payload);
     req.end();
 }
 
@@ -72,12 +70,11 @@ app.post('/update-fruit', (req, res) => {
             fruitServers.pop();
         }
 
-        console.log(`Received report for: ${data.fruitName} | JobID: ${data.jobId}`);
+        console.log(`Received report for: ${data.fruitName}`);
         sendToDiscord(data.fruitName, data.jobId);
         
         return res.status(200).json({ status: "Success", message: "Server saved and notified Discord." });
     }
-    console.log("❌ Invalid data format received.");
     res.status(400).json({ status: "Error", message: "Invalid data format." });
 });
 
