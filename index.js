@@ -7,7 +7,7 @@ app.use(express.json());
 let fruitServers = [];
 
 // PASTE YOUR DISCORD WEBHOOK URL INSIDE THE QUOTES BELOW
-const DISCORD_WEBHOOK_URL = "https://discord.com/api/webhooks/1531294331279769732/bi_jMmv1ie1tU-vImLq4j5_Rs0tyjJimj3sjwGr25P_-W1sY3gtbrWJfiSipp_6B22O1";
+const DISCORD_WEBHOOK_URL = "https://discord.com/api/webhooks/1531298819013345440/ajfMvJxA3fipdBSfK4oRfWqq2n2ySrYcnQRNtrQb3r7x3z7ic77RD0T0ctTbR2SU6xVP";
 
 function sendToDiscord(fruitName, jobId) {
     if (!DISCORD_WEBHOOK_URL || !DISCORD_WEBHOOK_URL.includes("discord.com")) return;
