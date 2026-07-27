@@ -1,14 +1,18 @@
 const express = require('express');
 const app = express();
 
+// Middleware to parse incoming JSON bodies
 app.use(express.json());
 
 let fruitServers = [];
 
+// POST: Receives data when a fruit is found
 app.post('/update-fruit', (req, res) => {
-    const data = req.body;
-    console.log("Received POST data:", data); // Check Render logs to see what's coming in
+    console.log("=== HIT POST /update-fruit ===");
+    console.log("Headers:", req.headers);
+    console.log("Body received:", req.body);
     
+    const data = req.body;
     if (data && data.jobId && data.fruitName) {
         fruitServers = fruitServers.filter(s => s.jobId !== data.jobId);
         
@@ -25,9 +29,12 @@ app.post('/update-fruit', (req, res) => {
         
         return res.status(200).json({ status: "Success", message: "Server saved." });
     }
-    res.status(400).json({ status: "Error", message: "Invalid data format." });
+    
+    console.log("Validation failed. Missing jobId or fruitName.");
+    return res.status(400).json({ status: "Error", message: "Invalid data format." });
 });
 
+// GET: Returns active fruit servers
 app.get('/get-fruit-servers', (req, res) => {
     res.status(200).json(fruitServers);
 });
