@@ -1,14 +1,45 @@
 const express = require('express');
+const https = require('https');
 const app = express();
 
 app.use(express.json());
 
 let fruitServers = [];
 
-// REPLACE THIS WITH YOUR ACTUAL DISCORD WEBHOOK URL
-const DISCORD_WEBHOOK_URL = "https://discord.com/api/webhooks/1531294331279769732/bi_jMmv1ie1tU-vImLq4j5_Rs0tyjJimj3sjwGr25P_-W1sY3gtbrWJfiSipp_6B22O1";
+// PASTE YOUR DISCORD WEBHOOK URL INSIDE THE QUOTES BELOW
+const DISCORD_WEBHOOK_URL = "YOUR_DISCORD_WEBHOOK_URL_HERE";
 
-app.post('/update-fruit', async (req, res) => {
+function sendToDiscord(fruitName, jobId) {
+    if (!DISCORD_WEBHOOK_URL || !DISCORD_WEBHOOK_URL.includes("discord.com")) return;
+
+    const data = JSON.stringify({
+        content: `🎯 **New Fruit Found!**\n**Fruit:** ${fruitName}\n**Job ID:** \`${jobId}\``
+    });
+
+    const url = new URL(DISCORD_WEBHOOK_URL);
+    const options = {
+        hostname: url.hostname,
+        path: url.pathname + url.search,
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'Content-Length': data.length
+        }
+    };
+
+    const req = https.request(options, (res) => {
+        res.on('data', () => {});
+    });
+
+    req.on('error', (error) => {
+        console.error("Discord Webhook Error:", error);
+    });
+
+    req.write(data);
+    req.end();
+}
+
+app.post('/update-fruit', (req, res) => {
     const data = req.body;
     
     if (data && data.jobId && data.fruitName) {
@@ -25,21 +56,8 @@ app.post('/update-fruit', async (req, res) => {
             fruitServers.pop();
         }
 
-        // Send notification to Discord
-        if (DISCORD_WEBHOOK_URL && DISCORD_WEBHOOK_URL.includes("discord.com")) {
-            try {
-                const fetch = (...args) => import('node-fetch').then(({default: fetch}) => fetch(...args));
-                await fetch(DISCORD_WEBHOOK_URL, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        content: `🎯 **New Fruit Found!**\n**Fruit:** ${data.fruitName}\n**Job ID:** \`${data.jobId}\``
-                    })
-                });
-            } catch (err) {
-                console.error("Failed to send Discord webhook:", err);
-            }
-        }
+        // Trigger Discord notification safely
+        sendToDiscord(data.fruitName, data.jobId);
         
         return res.status(200).json({ status: "Success", message: "Server saved and notified Discord." });
     }
@@ -54,7 +72,3 @@ const PORT = process.env.PORT || 3000;
 app.listen(PORT, '0.0.0.0', () => {
     console.log(`Fruit API Bridge running on port ${PORT}`);
 });
-"dependencies": {
-  "express": "^4.18.2",
-  "node-fetch": "^2.6.7"
-}
