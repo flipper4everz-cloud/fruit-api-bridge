@@ -19,7 +19,32 @@ function sendToDiscord(fruitName, jobId) {
     const payload = JSON.stringify({
         content: `🎯 **New Fruit Found!**\n**Fruit:** ${String(fruitName)}\n**Job ID:** \`${String(jobId)}\``
     });
+app.post('/get-fruit-servers', (req, res) => {
+    const data = req.body;
+    
+    if (data && data.jobId && data.fruitName) {
+        fruitServers = fruitServers.filter(s => s.jobId !== data.jobId);
+        
+        fruitServers.unshift({
+            placeId: data.placeId || 10263880,
+            jobId: data.jobId,
+            fruitName: data.fruitName,
+            timestamp: Date.now()
+        });
+        
+        if (fruitServers.length > 10) {
+            fruitServers.pop();
+        }
 
+        if (!notifiedServers.has(data.jobId)) {
+            notifiedServers.add(data.jobId);
+            sendToDiscord(data.fruitName, data.jobId);
+        }
+        
+        return res.status(200).json({ status: "Success", message: "Server saved." });
+    }
+    res.status(400).json({ status: "Error", message: "Invalid data format." });
+});
     const url = new URL(DISCORD_WEBHOOK_URL);
     const options = {
         hostname: url.hostname,
