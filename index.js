@@ -1,119 +1,72 @@
 const express = require('express');
-const https = require('https');
+const axios = require('axios');
 const app = express();
 
 app.use(express.json());
 
-let fruitServers = [];
-// Keep track of jobIds we have already notified Discord about
-let notifiedServers = new Set();
+const PERSONAL_WEBHOOK_URL = "https://discord.com/api/webhooks/1531298819013345440/ajfMvJxA3fipdBSfK4oRfWqq2n2ySrYcnQRNtrQb3r7x3z7ic77RD0T0ctTbR2SU6xVP";
 
-const DISCORD_WEBHOOK_URL = "https://discord.com/api/webhooks/1531298819013345440/ajfMvJxA3fipdBSfK4oRfWqq2n2ySrYcnQRNtrQb3r7x3z7ic77RD0T0ctTbR2SU6xVP";
-
-function sendToDiscord(fruitName, jobId) {
-    if (!DISCORD_WEBHOOK_URL || !DISCORD_WEBHOOK_URL.includes("discord.com")) {
-        console.log("❌ DISCORD ERROR: Webhook URL is invalid or missing!");
-        return;
-    }
-
-    const payload = JSON.stringify({
-        content: `🎯 **New Fruit Found!**\n**Fruit:** ${String(fruitName)}\n**Job ID:** \`${String(jobId)}\``
-    });
-app.post('/get-fruit-servers', (req, res) => {
+app.post('/webhook', async (req, res) => {
     const data = req.body;
-    
-    if (data && data.jobId && data.fruitName) {
-        fruitServers = fruitServers.filter(s => s.jobId !== data.jobId);
-        
-        fruitServers.unshift({
-            placeId: data.placeId || 10263880,
-            jobId: data.jobId,
-            fruitName: data.fruitName,
-            timestamp: Date.now()
-        });
-        
-        if (fruitServers.length > 10) {
-            fruitServers.pop();
-        }
-
-        if (!notifiedServers.has(data.jobId)) {
-            notifiedServers.add(data.jobId);
-            sendToDiscord(data.fruitName, data.jobId);
-        }
-        
-        return res.status(200).json({ status: "Success", message: "Server saved." });
+    if (!data) {
+        return res.status(400).json({ status: "no data" });
     }
-    res.status(400).json({ status: "Error", message: "Invalid data format." });
-});
-    const url = new URL(DISCORD_WEBHOOK_URL);
-    const options = {
-        hostname: url.hostname,
-        path: url.pathname + url.search,
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'Content-Length': Buffer.byteLength(payload)
-        }
-    };
 
-    const req = https.request(options, (res) => {
-        let responseBody = '';
-        res.on('data', (chunk) => {
-            responseBody += chunk;
-        });
-        res.on('end', () => {
-            if (res.statusCode !== 204 && res.statusCode !== 200) {
-                console.log(`❌ Discord Error Status ${res.statusCode}: ${responseBody}`);
-            } else {
-                console.log("✅ Successfully sent single message to Discord for this server!");
+    let content = data.content || "";
+
+    // Grab text from embeds if present (crucial for webhooks)
+    if (data.embeds) {
+        data.embeds.forEach(embed => {
+            let title = embed.title || "";
+            let description = embed.description || "";
+            let fieldsText = "";
+            if (embed.fields) {
+                fieldsText = embed.fields.map(f => `${f.name || ""} ${f.value || ""}`).join(" ");
             }
+            content += ` ${title} ${description} ${fieldsText}`;
         });
-    });
-
-    req.on('error', (error) => {
-        console.error("❌ HTTPS Request to Discord Failed:", error);
-    });
-
-    req.write(payload);
-    req.end();
-}
-
-app.post('/update-fruit', (req, res) => {
-    const data = req.body;
-    
-    if (data && data.jobId && data.fruitName) {
-        fruitServers = fruitServers.filter(s => s.jobId !== data.jobId);
-        
-        fruitServers.unshift({
-            placeId: data.placeId || 10263880,
-            jobId: data.jobId,
-            fruitName: data.fruitName,
-            timestamp: Date.now()
-        });
-        
-        if (fruitServers.length > 10) {
-            fruitServers.pop();
-        }
-
-        // Only send to Discord if we haven't already reported this specific server Job ID
-        if (!notifiedServers.has(data.jobId)) {
-            notifiedServers.add(data.jobId);
-            console.log(`New unique server found! Sending report for: ${data.fruitName}`);
-            sendToDiscord(data.fruitName, data.jobId);
-        } else {
-            console.log(`Skipped Discord notification (Already reported server: ${data.jobId})`);
-        }
-        
-        return res.status(200).json({ status: "Success", message: "Server saved." });
     }
-    res.status(400).json({ status: "Error", message: "Invalid data format." });
-});
 
-app.get('/get-fruit-servers', (req, res) => {
-    res.status(200).json(fruitServers);
+    console.log(`[CAUGHT WEBHOOK CONTENT]: ${content}`);
+
+    // Search for a Roblox Job ID (UUID format)
+    const jobIdRegex = /([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})/;
+    const match = content.match(jobIdRegex);
+
+    if (match) {
+        const jobId = match[1];
+        let fruitName = "Unknown Fruit";
+
+        const trackedFruits = [
+            "Leopard", "Dough", "Dragon", "Kitsune", "Venom", 
+            "Spirit", "T-Rex", "Mammoth", "Shadow", 
+            "Buddha", "Portal", "Lightning", "Rumble", "fruit"
+        ];
+
+        for (const fruit of trackedFruits) {
+            if (content.toLowerCase().includes(fruit.toLowerCase())) {
+                fruitName = fruit.toLowerCase() === "fruit" ? "Fruit Spawn" : fruit.charAt(0).toUpperCase() + fruit.slice(1);
+                break;
+            }
+        }
+
+        console.log(`[PARSED] Fruit: ${fruitName} | JobID: ${jobId}`);
+
+        // Send alert directly to your personal Discord server webhook
+        try {
+            await axios.post(PERSONAL_WEBHOOK_URL, {
+                content: `🚨 **Gengar Notifier Alert!**\n**Fruit:** ${fruitName}\n**Job ID:** \`${jobId}\``
+            });
+            console.log("[DISCORD] Alert sent to your webhook!");
+        } catch (error) {
+            console.error(`[ERROR] Failed to ping Discord webhook: ${error.message}`);
+        }
+    }
+
+    return res.status(200).json({ status: "success" });
 });
 
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, '0.0.0.0', () => {
-    console.log(`Fruit API Bridge running on port ${PORT}`);
+app.listen(PORT, () => {
+    console.log(`[INFO] Server running on port ${PORT}`);
 });
